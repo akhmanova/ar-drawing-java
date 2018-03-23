@@ -103,11 +103,12 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     private SeekBar mLineWidthBar;
     private SeekBar mLineDistanceScaleBar;
     private SeekBar mSmoothingBar;
-
+    private SeekBar mColorBar;
 
     private float mLineWidthMax = 0.33f;
     private float mDistanceScale = 0.0f;
     private float mLineSmoothing = 0.1f;
+    private float mLineColor = 0.0f;
 
     private float[] mLastFramePosition;
 
@@ -145,14 +146,17 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         mLineDistanceScaleBar = findViewById(R.id.distanceScale);
         mLineWidthBar = findViewById(R.id.lineWidth);
         mSmoothingBar = findViewById(R.id.smoothingSeekBar);
+        mColorBar = findViewById(R.id.colorSeekBar);
 
         mLineDistanceScaleBar.setProgress(sharedPref.getInt("mLineDistanceScale", 1));
         mLineWidthBar.setProgress(sharedPref.getInt("mLineWidth", 10));
         mSmoothingBar.setProgress(sharedPref.getInt("mSmoothing", 50));
+        mColorBar.setProgress(sharedPref.getInt("mColor", 0));
 
         mDistanceScale = LineUtils.map((float) mLineDistanceScaleBar.getProgress(), 0, 100, 1, 200, true);
         mLineWidthMax = LineUtils.map((float) mLineWidthBar.getProgress(), 0f, 100f, 0.1f, 5f, true);
         mLineSmoothing = LineUtils.map((float) mSmoothingBar.getProgress(), 0, 100, 0.01f, 0.2f, true);
+        mLineColor = LineUtils.color((float) mColorBar.getProgress(), 0, 100, 0.0f, 1.0f);
 
         SeekBar.OnSeekBarChangeListener seekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
             /**
@@ -171,6 +175,9 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
                 } else if (seekBar == mSmoothingBar) {
                     editor.putInt("mSmoothing", progress);
                     mLineSmoothing = LineUtils.map((float) progress, 0, 100, 0.01f, 0.2f, true);
+                } else if (seekBar == mColorBar) {
+                    editor.putInt("mColor", progress);
+                    mLineColor = LineUtils.color((float) progress, 0, 100, 0.0f, 1.0f);
                 }
                 mLineShaderRenderer.bNeedsUpdate.set(true);
 
@@ -190,6 +197,7 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         mLineDistanceScaleBar.setOnSeekBarChangeListener(seekBarChangeListener);
         mLineWidthBar.setOnSeekBarChangeListener(seekBarChangeListener);
         mSmoothingBar.setOnSeekBarChangeListener(seekBarChangeListener);
+        mColorBar.setOnSeekBarChangeListener(seekBarChangeListener);
 
         // Hide the settings ui
         mSettingsUI.setVisibility(View.GONE);
@@ -255,6 +263,7 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         mStrokes.add(new ArrayList<Vector3f>());
         mStrokes.get(mStrokes.size() - 1).add(mLastPoint);
     }
+
 
     /**
      * addPoint adds a point to the current stroke
@@ -583,7 +592,7 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
 
 
     /**
-     * onClickSettings toggles showing and hiding the Line Width, Smoothing, and Debug View toggle
+     * onClickSettings toggles showing and hiding the Line Width, Smoothing, Color and Debug View toggle
      */
     public void onClickSettings(View button) {
         ImageButton settingsButton = findViewById(R.id.settingsButton);
