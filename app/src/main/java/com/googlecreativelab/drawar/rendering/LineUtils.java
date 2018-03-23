@@ -46,6 +46,13 @@ public class LineUtils {
             return outVal;
     }
 
+    public static float color(float value, float inputMin, float inputMax, float outputMin, float outputMax) {
+        if(value < inputMin || value > inputMax || inputMax == inputMin || outputMax == outputMin) {
+            return 0.0f;
+        }
+
+        return value / (inputMax - inputMin) * (outputMax - outputMin);
+    }
     /**
      * @param start
      * @param stop
