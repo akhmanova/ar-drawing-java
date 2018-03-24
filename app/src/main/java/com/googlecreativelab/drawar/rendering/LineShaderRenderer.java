@@ -83,6 +83,7 @@ public class LineShaderRenderer {
     private float[] mNext;
     private float[] mSide;
     private float[] mWidth;
+    private Vector3f[] mColorVec;
     private float[] mPrevious;
 
     private int mPositionAddress;
@@ -293,6 +294,7 @@ public class LineShaderRenderer {
             mCounters = new float[count];
             mSide = new float[count];
             mWidth = new float[count];
+            mColorVec = new Vector3f[count];
         }
     }
 
@@ -372,7 +374,7 @@ public class LineShaderRenderer {
         mCounters[index] = counter;
         mSide[index] = side;
         mWidth[index] = width;
-
+        mColorVec[index] = new Vector3f(1.0f, 1.0f, 1.0f);
     }
 
     /**
@@ -396,6 +398,7 @@ public class LineShaderRenderer {
 
         FloatBuffer side = toFloatBuffer(mSide);
         FloatBuffer width = toFloatBuffer(mWidth);
+        FloatBuffer color = toFloatBuffer(mColorVec);
         FloatBuffer counter = toFloatBuffer(mCounters);
 
 
