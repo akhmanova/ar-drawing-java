@@ -13,7 +13,7 @@ uniform mat4 modelViewMatrix;
 uniform vec2 resolution;
 uniform float lineWidth;
 uniform float lineDepthScale;
-uniform vec3 color;
+uniform vec3 col;
 uniform float opacity;
 uniform float near;
 uniform float far;
@@ -22,6 +22,24 @@ uniform float sizeAttenuation;
 varying vec4 vColor;
 varying float vCounters;
 varying float depth;
+
+
+vec3 convertColor(float col){
+        if(col <= 1.0 / 6.0) {
+            return vec3 (col, 1.0, 0.0);
+        } else if(col <= 2.0 / 6.0) {
+            return vec3 (1.0, col, 0.0);
+        } else if(col <= 3.0 / 6.0) {
+            return vec3 (1.0, 0.0, col);
+        } else if(col <= 4.0 / 6.0) {
+            return vec3 (col, 0.0, 1.0);
+        } else if(col <= 5.0 / 6.0) {
+            return vec3 (col, 1.0, 0.0f);
+        } else {
+            return vec3 (0.0, 1.0, col);
+        }
+
+    }
 
 vec2 fix( vec4 i, float aspect ) {
     vec2 res = i.xy / i.w;
@@ -40,7 +58,7 @@ void main() {
     float aspect = resolution.x / resolution.y;
 	 float pixelWidthRatio = 1. / (resolution.x * projectionMatrix[0][0]);
 
-    vColor = vec4( color, opacity );
+    vColor = vec4( convertColor(colorLine), opacity );
 
     mat4 m = projectionMatrix * modelViewMatrix;
     vec4 finalPosition = m * vec4( position, 1.0 );
