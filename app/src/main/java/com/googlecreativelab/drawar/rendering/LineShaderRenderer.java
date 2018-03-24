@@ -56,6 +56,7 @@ public class LineShaderRenderer {
     private int mNextAttribute = 0;
     private int mSideAttribute = 0;
     private int mWidthAttribte = 0;
+    private int mColorAttribte = 0;
 
     private int mCountersAttribute = 0;
 
@@ -186,6 +187,7 @@ public class LineShaderRenderer {
         mNextAttribute = GLES20.glGetAttribLocation(mProgramName, "next");
         mSideAttribute = GLES20.glGetAttribLocation(mProgramName, "side");
         mWidthAttribte = GLES20.glGetAttribLocation(mProgramName, "width");
+        mColorAttribte = GLES20.glGetAttribLocation(mProgramName, "colorLine");
         mCountersAttribute = GLES20.glGetAttribLocation(mProgramName, "counters");
         mProjectionUniform = GLES20.glGetUniformLocation(mProgramName, "projectionMatrix");
         mModelViewUniform = GLES20.glGetUniformLocation(mProgramName, "modelViewMatrix");
@@ -456,7 +458,8 @@ public class LineShaderRenderer {
                 side);
         GLES20.glBufferSubData(GLES20.GL_ARRAY_BUFFER, mWidthAddress, mNumBytes * BYTES_PER_FLOAT,
                 width);
-
+        GLES20.glBufferSubData(GLES20.GL_ARRAY_BUFFER, mColorAddress, mNumBytes * BYTES_PER_FLOAT,
+                color);
         GLES20.glBufferSubData(GLES20.GL_ARRAY_BUFFER, mCounterAddress, mNumBytes * BYTES_PER_FLOAT,
                 counter);
 
@@ -502,6 +505,8 @@ public class LineShaderRenderer {
                 mSideAttribute, 1, GLES20.GL_FLOAT, false, BYTES_PER_FLOAT, mSideAddress);
         GLES20.glVertexAttribPointer(
                 mWidthAttribte, 1, GLES20.GL_FLOAT, false, BYTES_PER_FLOAT, mWidthAddress);
+        GLES20.glVertexAttribPointer(
+                mColorAttribte, 1, GLES20.GL_FLOAT, false, BYTES_PER_FLOAT, mColorAddress);
         GLES20.glVertexAttribPointer(
                 mCountersAttribute, 1, GLES20.GL_FLOAT, false, BYTES_PER_FLOAT, mCounterAddress);
         GLES20.glUniformMatrix4fv(

@@ -5,6 +5,7 @@ attribute vec3 previous;
 attribute vec3 next;
 attribute float side;
 attribute float width;
+attribute float colorLine;
 attribute float counters;
 
 uniform mat4 projectionMatrix;
