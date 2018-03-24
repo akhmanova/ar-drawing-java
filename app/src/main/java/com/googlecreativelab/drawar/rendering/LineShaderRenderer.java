@@ -84,12 +84,14 @@ public class LineShaderRenderer {
     private float[] mSide;
     private float[] mWidth;
     private float[] mPrevious;
+    private float[] mColorArr;
 
     private int mPositionAddress;
     private int mPreviousAddress;
     private int mNextAddress;
     private int mSideAddress;
     private int mWidthAddress;
+    private int mColorAddress;
     private int mCounterAddress;
 
 
@@ -101,7 +103,7 @@ public class LineShaderRenderer {
 
     private int mProgramName = 0;
     private float lineWidth = 0;
-
+    private float lineColorFloat = 0;
 
     private Vector3f mColor;
 
@@ -219,6 +221,30 @@ public class LineShaderRenderer {
     }
 
     /**
+     * Sets the LineColor of the Line.
+     * Requires bNeedsUpdate.set(true) to take effect
+     * @param color
+     */
+    public void setLineColor(float color){
+        Vector3f result;
+        if(color <= 1.0f / 6.0f) {
+            result = new Vector3f(color, 1.0f, 0.0f);
+        } else if(color <= 2.0f / 6.0f) {
+            result = new Vector3f(1.0f, color, 0.0f);
+        } else if(color <= 3.0f / 6.0f) {
+            result = new Vector3f(1.0f, 0.0f, color);
+        } else if(color <= 4.0f / 6.0f) {
+            result = new Vector3f(color, 0.0f, 1.0f);
+        } else if(color <= 5.0f / 6.0f) {
+            result = new Vector3f(color, 1.0f, 0.0f);
+        } else {
+            result = new Vector3f(0.0f, 1.0f, color);
+        }
+        lineColorFloat = color;
+        mColor = result;
+    }
+
+    /**
      * Enables or Disables the Debug View in the Fragment Shader.  Debug View highlights the strokes
      * at the same depth as the user.  It allows the user to position new drawings to intersect or
      * bypass the existing strokes
@@ -293,6 +319,7 @@ public class LineShaderRenderer {
             mCounters = new float[count];
             mSide = new float[count];
             mWidth = new float[count];
+            mColorArr = new float[count];
         }
     }
 
@@ -332,14 +359,14 @@ public class LineShaderRenderer {
 
 
             if (i == 0) {
-                setMemory(ii++, current, previous, next, c, lineWidth, 1f);
+                setMemory(ii++, current, previous, next, c, lineWidth, 1f, lineColorFloat);
             }
 
-            setMemory(ii++, current, previous, next, c, lineWidth, 1f);
-            setMemory(ii++, current, previous, next, c, lineWidth, -1f);
+            setMemory(ii++, current, previous, next, c, lineWidth, 1f, lineColorFloat);
+            setMemory(ii++, current, previous, next, c, lineWidth, -1f, lineColorFloat);
 
             if (i == lineSize - 1) {
-                setMemory(ii++, current, previous, next, c, lineWidth, -1f);
+                setMemory(ii++, current, previous, next, c, lineWidth, -1f, lineColorFloat);
             }
         }
         return ii;
@@ -356,7 +383,7 @@ public class LineShaderRenderer {
      * @param width
      * @param side
      */
-    private void setMemory(int index, Vector3f pos, Vector3f prev, Vector3f next, float counter, float width, float side){
+    private void setMemory(int index, Vector3f pos, Vector3f prev, Vector3f next, float counter, float width, float side, float color){
         mPositions[index*3] = pos.x;
         mPositions[index*3+1] = pos.y;
         mPositions[index*3+2] = pos.z;
@@ -372,7 +399,7 @@ public class LineShaderRenderer {
         mCounters[index] = counter;
         mSide[index] = side;
         mWidth[index] = width;
-
+        mColorArr[index] = color;
     }
 
     /**
@@ -396,6 +423,8 @@ public class LineShaderRenderer {
 
         FloatBuffer side = toFloatBuffer(mSide);
         FloatBuffer width = toFloatBuffer(mWidth);
+        FloatBuffer color = toFloatBuffer(mColorArr);
+
         FloatBuffer counter = toFloatBuffer(mCounters);
 
 
@@ -408,7 +437,8 @@ public class LineShaderRenderer {
 
         mWidthAddress = mSideAddress + mNumBytes * BYTES_PER_FLOAT;
         mCounterAddress = mWidthAddress + mNumBytes * BYTES_PER_FLOAT;
-        mVboSize = mCounterAddress + mNumBytes * BYTES_PER_FLOAT;
+        mColorAddress = mCounterAddress + mNumBytes * BYTES_PER_FLOAT;
+        mVboSize = mColorAddress + mNumBytes * BYTES_PER_FLOAT;
 
         ShaderUtil.checkGLError(TAG, "before update");
 
@@ -426,6 +456,7 @@ public class LineShaderRenderer {
                 side);
         GLES20.glBufferSubData(GLES20.GL_ARRAY_BUFFER, mWidthAddress, mNumBytes * BYTES_PER_FLOAT,
                 width);
+
         GLES20.glBufferSubData(GLES20.GL_ARRAY_BUFFER, mCounterAddress, mNumBytes * BYTES_PER_FLOAT,
                 counter);
 

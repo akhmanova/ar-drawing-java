@@ -108,7 +108,7 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     private float mLineWidthMax = 0.33f;
     private float mDistanceScale = 0.0f;
     private float mLineSmoothing = 0.1f;
-    private float mLineColor = 0.0f;
+    private float mLineColor = 0f;
 
     private float[] mLastFramePosition;
 
@@ -515,7 +515,7 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
             }
             mLineShaderRenderer.setDrawDebug(bLineParameters.get());
             if (mLineShaderRenderer.bNeedsUpdate.get()) {
-                mLineShaderRenderer.setColor(AppSettings.getColor());
+                mLineShaderRenderer.setLineColor(mLineColor);
                 mLineShaderRenderer.mDrawDistance = AppSettings.getStrokeDrawDistance();
                 mLineShaderRenderer.setDistanceScale(mDistanceScale);
                 mLineShaderRenderer.setLineWidth(mLineWidthMax);
