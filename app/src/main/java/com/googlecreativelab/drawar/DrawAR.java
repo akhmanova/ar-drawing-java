@@ -17,13 +17,18 @@
 package com.googlecreativelab.drawar;
 
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.nfc.NfcAdapter;
+import android.nfc.NfcEvent;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.design.widget.BaseTransientBottomBar;
@@ -140,6 +145,29 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     private boolean bInstallRequested;
 
     private TrackingState mState;
+
+    NfcAdapter mNfcAdapter;
+    // Flag to indicate that Android Beam is available
+    boolean mAndroidBeamAvailable  = false;
+    // List of URIs to provide to Android Beam
+    private Uri[] mFileUris = new Uri[10];
+    private Uri fileUri;
+    private class FileUriCallback implements
+            NfcAdapter.CreateBeamUrisCallback {
+        public FileUriCallback() {
+        }
+        /**
+         * Create content URIs as needed to share with another device
+         */
+        @Override
+        public Uri[] createBeamUris(NfcEvent event) {
+            return mFileUris;
+        }
+    }
+    // Instance that returns available files from this app
+    private FileUriCallback mFileUriCallback;
+
+
     /**
      * Setup the app when main activity is created
      */
@@ -169,6 +197,43 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         mLineWidthMax = LineUtils.map((float) mLineWidthBar.getProgress(), 0f, 100f, 0.1f, 5f, true);
         mLineSmoothing = LineUtils.map((float) mSmoothingBar.getProgress(), 0, 100, 0.01f, 0.2f, true);
         mLineColor = LineUtils.color((float) mColorBar.getProgress(), 0, 100, 0.0f, 1.0f);
+
+       if (Build.VERSION.SDK_INT <
+                Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            // If Android Beam isn't available, don't continue.
+            mAndroidBeamAvailable = false;
+            /*
+             * Disable Android Beam file transfer features here.
+             */
+
+            // Android Beam file transfer is available, continue
+        } else {
+            mNfcAdapter = NfcAdapter.getDefaultAdapter(this);
+            /*
+             * Instantiate a new FileUriCallback to handle requests for
+             * URIs
+             */
+           mFileUriCallback = new FileUriCallback();
+           // Set the dynamic callback for URI requests.
+           mNfcAdapter.setBeamPushUrisCallback(mFileUriCallback,this);
+            /*
+         * Create a list of URIs, get a File,
+         * and set its permissions
+         */
+           //private Uri[] mFileUris = new Uri[10];
+           String transferFile = "transferimage.dat";
+           File extDir = getExternalFilesDir(null);
+           File requestFile = new File(extDir, transferFile);
+           requestFile.setReadable(true, false);
+           // Get a URI for the File and add it to the list of URIs
+           fileUri = Uri.fromFile(requestFile);
+           if (fileUri != null) {
+               mFileUris[0] = fileUri;
+           } else {
+               Log.e("My Activity", "No File URI available for file.");
+           }
+
+        }
 
         SeekBar.OnSeekBarChangeListener seekBarChangeListener = new SeekBar.OnSeekBarChangeListener() {
             /**
