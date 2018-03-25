@@ -34,7 +34,7 @@ vec3 convertColor(float col){
         } else if(col <= 4.0 / 6.0) {
             return vec3 (col, 0.0, 1.0);
         } else if(col <= 5.0 / 6.0) {
-            return vec3 (col, 1.0, 0.0f);
+            return vec3 (col, 1.0, 0.0);
         } else {
             return vec3 (0.0, 1.0, col);
         }

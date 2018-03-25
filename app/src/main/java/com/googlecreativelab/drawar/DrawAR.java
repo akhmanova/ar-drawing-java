@@ -25,6 +25,7 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GestureDetectorCompat;
@@ -55,6 +56,15 @@ import com.googlecreativelab.drawar.rendering.BackgroundRenderer;
 import com.googlecreativelab.drawar.rendering.LineShaderRenderer;
 import com.googlecreativelab.drawar.rendering.LineUtils;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OptionalDataException;
+import java.io.StreamCorruptedException;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -120,10 +130,12 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     private AtomicBoolean bUndo = new AtomicBoolean(false);
     private AtomicBoolean bNewStroke = new AtomicBoolean(false);
 
-    private ArrayList<ArrayList<Vector3f>> mStrokes;
+    private ArrayList<Stroke> mStrokes;
 
     private DisplayRotationHelper mDisplayRotationHelper;
     private Snackbar mMessageSnackbar;
+
+    private File savedFile;
 
     private boolean bInstallRequested;
 
@@ -260,8 +272,9 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         }
         Vector3f p = biquadFilter.update(newPoint);
         mLastPoint = new Vector3f(p);
-        mStrokes.add(new ArrayList<Vector3f>());
-        mStrokes.get(mStrokes.size() - 1).add(mLastPoint);
+        Stroke stroke = new Stroke(new ArrayList<Vector3f>(), mLineColor);
+        mStrokes.add(stroke);
+        mStrokes.get(mStrokes.size() - 1).pointsArray.add(mLastPoint);
     }
 
 
@@ -274,7 +287,7 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         if (LineUtils.distanceCheck(newPoint, mLastPoint)) {
             Vector3f p = biquadFilter.update(newPoint);
             mLastPoint = new Vector3f(p);
-            mStrokes.get(mStrokes.size() - 1).add(mLastPoint);
+            mStrokes.get(mStrokes.size() - 1).pointsArray.add(mLastPoint);
         }
     }
 
@@ -283,8 +296,10 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
      * onResume part of the Android Activity Lifecycle
      */
     @Override
+    @SuppressWarnings("unchecked")
     protected void onResume() {
         super.onResume();
+        if (savedFile!=null&&savedFile.canRead()) mStrokes = (ArrayList<Stroke>) loadObject(savedFile);
 
         if (mSession == null) {
             Exception exception = null;
@@ -354,6 +369,12 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
             mDisplayRotationHelper.onPause();
             mSurfaceView.onPause();
             mSession.pause();
+
+
+
+            savedFile = saveObject(mStrokes);
+
+
         }
 
         mPaused = true;
@@ -365,6 +386,51 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
         mScreenWidth = displayMetrics.widthPixels;
     }
 
+    private File saveObject(Object obj) {
+        FileOutputStream outStream;
+        try {
+//            File f = new File(Environment.getExternalStorageDirectory(), "/ArShare.dat");
+            File f = File.createTempFile("ArShare.dat", null);
+
+            outStream = new FileOutputStream(f);
+            ObjectOutputStream objectOutStream = new ObjectOutputStream(outStream);
+
+
+            objectOutStream.writeObject(obj);
+            objectOutStream.close();
+            return f;
+        } catch (IOException exception) {
+            Log.e(TAG, "Exception saving object", exception);
+
+        }
+        return null;
+    }
+
+    private Object loadObject(File f)
+    {
+        Object res = null;
+        try {
+            ObjectInputStream objectInStream = new ObjectInputStream(new FileInputStream(f));
+
+            res = objectInStream.readObject();
+            objectInStream.close();
+        } catch (FileNotFoundException exception) {
+            Log.e(TAG, "Exception loading object", exception);
+        } catch (ClassNotFoundException exception) {
+            Log.e(TAG, "Exception loading object", exception);
+        } catch (OptionalDataException exception) {
+            Log.e(TAG, "Exception loading object", exception);
+        } catch (StreamCorruptedException exception) {
+            Log.e(TAG, "Exception loading object", exception);
+        } catch (IOException exception) {
+            Log.e(TAG, "Exception loading object", exception);
+        }
+        if(res==null)
+        {
+            Log.e(TAG, "Failed to load object");
+        }
+        return res;
+    }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
