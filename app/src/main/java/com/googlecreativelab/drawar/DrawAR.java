@@ -17,11 +17,13 @@
 package com.googlecreativelab.drawar;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
@@ -31,10 +33,12 @@ import android.opengl.Matrix;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.GestureDetector;
@@ -150,7 +154,6 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     // Flag to indicate that Android Beam is available
     boolean mAndroidBeamAvailable  = false;
     // List of URIs to provide to Android Beam
-    private Uri[] mFileUris = new Uri[10];
     private Uri fileUri;
     private class FileUriCallback implements
             NfcAdapter.CreateBeamUrisCallback {
@@ -161,12 +164,108 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
          */
         @Override
         public Uri[] createBeamUris(NfcEvent event) {
+                        /*
+         * Create a list of URIs, get a File,
+         * and set its permissions
+         */
+            Uri[] mFileUris = new Uri[1];
+
+            // Get a URI for the File and add it to the list of URIs
+            savedFile = saveObject(mStrokes);
+            fileUri = Uri.fromFile(savedFile);
+            if (fileUri != null) {
+                mFileUris[0] = fileUri;
+            } else {
+                Log.e(TAG, "No File URI available for file.");
+            }
             return mFileUris;
         }
     }
     // Instance that returns available files from this app
     private FileUriCallback mFileUriCallback;
 
+    // A File object containing the path to the transferred files
+    private File mReceivedFile;
+    // Incoming Intent
+    private Intent mIntent;
+
+    private void handleViewIntent() {
+
+        // Get the Intent action
+        mIntent = getIntent();
+        String action = mIntent.getAction();
+        /*
+         * For ACTION_VIEW, the Activity is being asked to display data.
+         * Get the URI.
+         */
+        if (TextUtils.equals(action, Intent.ACTION_VIEW)) {
+            // Get the URI from the Intent
+            Uri beamUri = mIntent.getData();
+            /*
+             * Test for the type of URI, by getting its scheme value
+             */
+            if (TextUtils.equals(beamUri.getScheme(), "file")) {
+                mReceivedFile = handleFileUri(beamUri);
+
+            } else if (TextUtils.equals( beamUri.getScheme(), "content")) {
+                mReceivedFile = handleContentUri(beamUri);
+            }
+        }
+        if (mReceivedFile!=null&&mReceivedFile.canRead()) mStrokes = (ArrayList<Stroke>) loadObject(mReceivedFile);
+
+    }
+
+    public File handleFileUri(Uri beamUri) {
+        // Get the path part of the URI
+        String fileName = beamUri.getPath();
+        // Create a File object for this filename
+        File copiedFile = new File(fileName);
+        // Get a string containing the file's parent directory
+        return copiedFile;
+    }
+
+
+    public File handleContentUri(Uri beamUri) {
+        // Position of the filename in the query Cursor
+        int filenameIndex;
+        // File object for the filename
+        File copiedFile;
+        // The filename stored in MediaStore
+        String fileName;
+        // Test the authority of the URI
+        if (TextUtils.equals(beamUri.getAuthority(), MediaStore.AUTHORITY)) {
+            // Get the column that contains the file name
+            String[] projection = { MediaStore.MediaColumns.DATA };
+            Cursor pathCursor =
+                    getContentResolver().query(beamUri, projection,
+                            null, null, null);
+            // Check for a valid cursor
+            if (pathCursor != null &&
+                    pathCursor.moveToFirst()) {
+                // Get the column index in the Cursor
+                filenameIndex = pathCursor.getColumnIndex(
+                        MediaStore.MediaColumns.DATA);
+                // Get the full file name including path
+                fileName = pathCursor.getString(filenameIndex);
+                // Create a File object for the filename
+                return new File(fileName);
+
+            } else {
+                // The query didn't work; return null
+                return null;
+            }
+        }
+        return null;
+
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // getIntent() should always return the most recent
+        setIntent(intent);
+        handleViewIntent();
+    }
 
     /**
      * Setup the app when main activity is created
@@ -175,6 +274,8 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         final SharedPreferences sharedPref = this.getPreferences(Context.MODE_PRIVATE);
+
+        handleViewIntent();
 
         setContentView(R.layout.activity_main);
 
@@ -216,22 +317,6 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
            mFileUriCallback = new FileUriCallback();
            // Set the dynamic callback for URI requests.
            mNfcAdapter.setBeamPushUrisCallback(mFileUriCallback,this);
-            /*
-         * Create a list of URIs, get a File,
-         * and set its permissions
-         */
-           //private Uri[] mFileUris = new Uri[10];
-           String transferFile = "transferimage.dat";
-           File extDir = getExternalFilesDir(null);
-           File requestFile = new File(extDir, transferFile);
-           requestFile.setReadable(true, false);
-           // Get a URI for the File and add it to the list of URIs
-           fileUri = Uri.fromFile(requestFile);
-           if (fileUri != null) {
-               mFileUris[0] = fileUri;
-           } else {
-               Log.e("My Activity", "No File URI available for file.");
-           }
 
         }
 
@@ -361,10 +446,8 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
      * onResume part of the Android Activity Lifecycle
      */
     @Override
-    @SuppressWarnings("unchecked")
     protected void onResume() {
         super.onResume();
-        if (savedFile!=null&&savedFile.canRead()) mStrokes = (ArrayList<Stroke>) loadObject(savedFile);
 
         if (mSession == null) {
             Exception exception = null;
@@ -435,8 +518,6 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
             mSurfaceView.onPause();
             mSession.pause();
 
-
-
             savedFile = saveObject(mStrokes);
 
 
@@ -454,8 +535,8 @@ public class DrawAR extends AppCompatActivity implements GLSurfaceView.Renderer,
     private File saveObject(Object obj) {
         FileOutputStream outStream;
         try {
-//            File f = new File(Environment.getExternalStorageDirectory(), "/ArShare.dat");
-            File f = File.createTempFile("ArShare.dat", null);
+            File f = new File(Environment.getExternalStorageDirectory(), "/ArShare.ars");
+//            File f = File.createTempFile("ArShare.dat", null);
 
             outStream = new FileOutputStream(f);
             ObjectOutputStream objectOutStream = new ObjectOutputStream(outStream);
