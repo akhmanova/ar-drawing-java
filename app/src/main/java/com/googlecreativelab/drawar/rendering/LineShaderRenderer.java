@@ -16,6 +16,7 @@ package com.googlecreativelab.drawar.rendering;
 
 
 import com.googlecreativelab.drawar.R;
+import com.googlecreativelab.drawar.Stroke;
 
 import android.content.Context;
 import android.opengl.GLES20;
@@ -23,6 +24,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 
+import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -38,7 +40,7 @@ import javax.vecmath.Vector3f;
 /**
  * Renders a point cloud.
  */
-public class LineShaderRenderer {
+public class LineShaderRenderer implements Serializable {
 
 
     private static final String TAG = LineShaderRenderer.class.getSimpleName();
@@ -282,20 +284,17 @@ public class LineShaderRenderer {
      * @param strokes a ArrayList of ArrayLists of Vector3fs in world space.  The outer ArrayList
      *                contains the strokes, while the inner ArrayList contains the Vertex of each Line
      */
-    public void updateStrokes(ArrayList<ArrayList<Vector3f>> strokes) {
+    public void updateStrokes(ArrayList<Stroke> strokes) {
         mNumPoints = 0;
-        for (ArrayList<Vector3f> l : strokes) {
-            mNumPoints += l.size()*2 + 2;
+        for (Stroke l : strokes) {
+            mNumPoints += l.getPointsArray().size()*2 + 2;
         }
 
         ensureCapacity(mNumPoints);
 
         int offset = 0;
-        for ( int i = 0; i < strokes.size(); i++) {
-            if (i==(strokes.size()-1)) {
-                colorList.add(i,lineColorFloat);
-            }
-            offset = addLine(strokes.get(i), offset, i);
+        for ( Stroke l : strokes ) {
+            offset = addLine(l, offset);
         }
         mNumBytes = offset;
 
@@ -336,7 +335,8 @@ public class LineShaderRenderer {
      * @param offset
      * @return
      */
-    private int addLine(List<Vector3f> line, int offset, int lineNum) {
+    private int addLine(Stroke stroke, int offset) {
+        List<Vector3f> line = stroke.getPointsArray();
         if (line == null || line.size() < 2)
             return offset;
 
@@ -362,7 +362,7 @@ public class LineShaderRenderer {
             Vector3f previous = line.get(i_m_1);
             Vector3f next = line.get(i_p_1);
 
-            float col = colorList.get(lineNum);
+            float col = stroke.getColor();
 
             if (i == 0) {
                 setMemory(ii++, current, previous, next, c, lineWidth, 1f, col);
